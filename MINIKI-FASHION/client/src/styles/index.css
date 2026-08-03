@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply font-body text-gray-800 bg-cream;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 bg-pink-600 hover:bg-pink-700 text-white font-medium px-6 py-3 rounded-full transition-all duration-300 shadow-luxury disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 border-2 border-pink-600 text-pink-600 hover:bg-pink-600 hover:text-white font-medium px-6 py-3 rounded-full transition-all duration-300;
+  }
+  .btn-gold {
+    @apply inline-flex items-center justify-center gap-2 bg-gold-500 hover:bg-gold-600 text-white font-medium px-6 py-3 rounded-full transition-all duration-300 shadow-gold;
+  }
+  .section-title {
+    @apply text-3xl md:text-4xl font-heading font-bold text-gray-900 text-center;
+  }
+  .section-subtitle {
+    @apply text-pink-600 uppercase tracking-[0.2em] text-xs md:text-sm font-semibold text-center mb-2;
+  }
+  .container-custom {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  .input-field {
+    @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all;
+  }
+  .card {
+    @apply bg-white rounded-2xl shadow-md hover:shadow-luxury transition-all duration-300;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #fff5f8;
+}
+::-webkit-scrollbar-thumb {
+  background: #d62d68;
+  border-radius: 10px;
+}
