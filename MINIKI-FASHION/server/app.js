@@ -20,6 +20,7 @@ const userRoutes = require('./routes/userRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 
 const app = express();
+app.set('trust proxy', 1);
 
 // Security & core middleware
 app.use(helmet({ crossOriginResourcePolicy: false }));
