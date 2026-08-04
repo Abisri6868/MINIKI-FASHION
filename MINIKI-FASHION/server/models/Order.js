@@ -41,40 +41,131 @@ const trackingHistorySchema = new mongoose.Schema(
 const orderSchema = new mongoose.Schema(
   {
     orderNumber: { type: String, unique: true, required: true },
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+
     items: [orderItemSchema],
+
     shippingAddress: shippingAddressSchema,
-    paymentMethod: { type: String, enum: ['razorpay', 'cod'], default: 'razorpay' },
+
+    paymentMethod: {
+      type: String,
+      enum: ['razorpay', 'cod'],
+      default: 'razorpay',
+    },
+
+    // Delivery Options
+    deliveryType: {
+      type: String,
+      enum: ['Standard', 'Express'],
+      default: 'Standard',
+    },
+
+    expectedDeliveryDate: {
+      type: Date,
+    },
+
+    trackingNumber: {
+      type: String,
+      default: '',
+    },
+
+    courierPartner: {
+      type: String,
+      default: '',
+    },
+
     paymentResult: {
       razorpay_order_id: { type: String },
       razorpay_payment_id: { type: String },
       razorpay_signature: { type: String },
       status: { type: String },
     },
-    itemsPrice: { type: Number, required: true, default: 0 },
-    shippingPrice: { type: Number, required: true, default: 0 },
-    discountAmount: { type: Number, required: true, default: 0 },
-    couponCode: { type: String, default: '' },
-    totalPrice: { type: Number, required: true, default: 0 },
-    isPaid: { type: Boolean, default: false },
-    paidAt: { type: Date },
+
+    itemsPrice: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+
+    shippingPrice: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+
+    discountAmount: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+
+    couponCode: {
+      type: String,
+      default: '',
+    },
+
+    totalPrice: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+
+    isPaid: {
+      type: Boolean,
+      default: false,
+    },
+
+    paidAt: {
+      type: Date,
+    },
+
+    // Order Status Flow
     orderStatus: {
       type: String,
-      enum: ['Pending', 'Processing', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled', 'Returned'],
+      enum: [
+        'Pending',
+        'Confirmed',
+        'Processing',
+        'Shipped',
+        'Delivered',
+        'Cancelled',
+        'Returned',
+      ],
       default: 'Pending',
     },
+
     trackingHistory: [trackingHistorySchema],
-    isDelivered: { type: Boolean, default: false },
-    deliveredAt: { type: Date },
-    cancelReason: { type: String, default: '' },
+
+    isDelivered: {
+      type: Boolean,
+      default: false,
+    },
+
+    deliveredAt: {
+      type: Date,
+    },
+
+    cancelReason: {
+      type: String,
+      default: '',
+    },
   },
   { timestamps: true }
 );
 
 orderSchema.pre('validate', function (next) {
   if (!this.orderNumber) {
-    this.orderNumber = 'MK' + Date.now().toString().slice(-8) + Math.floor(Math.random() * 900 + 100);
+    this.orderNumber =
+      'MK' +
+      Date.now().toString().slice(-8) +
+      Math.floor(Math.random() * 900 + 100);
   }
+
   next();
 });
 

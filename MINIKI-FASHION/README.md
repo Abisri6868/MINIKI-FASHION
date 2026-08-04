@@ -82,7 +82,7 @@ Secure login, product CRUD with multi-image Cloudinary upload, category manageme
 | Payment | `/api/payment` |
 
 ## Brand
-**MINIKI FASHION** — Bridal Wear, Sarees, Kurtis, Feeding Wear, Maternity Wear, Kids Wear, New Born Collection, Bridal Jewellery, Rental Lehengas, Groom Coat Suits, Aari Work, Customized Stitching.
+**MINIKI FASHION** — Bridal Wear, Sarees, tis, Feeding Wear, Maternity Wear, Kids Wear, New Born Collection, Bridal Jewellery, Rental Lehengas, Groom Coat Suits, Aari Work, Customized Stitching.
 
 Theme: Luxury Boutique — Pink / White / Gold.
 
