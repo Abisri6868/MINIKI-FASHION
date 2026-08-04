@@ -9,12 +9,13 @@ export const NAV_LINKS = [
 ];
 
 export const FOOTER_CATEGORIES = [
-  'Bridal Wear & Jewellery',
   'Sarees',
   'Kurtis',
+  'Jeans & Jeggings',
   'Maternity Wear',
   'Kids Wear',
-  'Rental Lehengas',
+  'Inner Wear',
+  'Rental Lehengas & Jewellery',
 ];
 
 export const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Free Size'];

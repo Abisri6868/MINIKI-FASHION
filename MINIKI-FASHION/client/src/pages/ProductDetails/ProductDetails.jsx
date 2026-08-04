@@ -151,6 +151,11 @@ const ProductDetails = () => {
               </>
             )}
           </div>
+          <div className="mt-4 rounded-lg border border-green-200 bg-green-50 p-3">
+  <p className="text-green-700 font-medium">
+    🚚 Delivery in 7 Days
+  </p>
+</div>
 
           <p className="text-gray-600 mt-5 leading-relaxed">{product.shortDescription || product.description}</p>
 

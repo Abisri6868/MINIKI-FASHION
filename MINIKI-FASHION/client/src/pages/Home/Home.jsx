@@ -78,12 +78,19 @@ const Home = () => {
       )}
 
       <Banner
-        title="Rental Lehengas for Your Dream Day"
-        subtitle="Designer bridal lehengas available on rent — luxury without limits."
-        ctaText="Explore Rentals"
-        ctaLink="/shop?category=Rental Lehengas"
+        title="Rental Lehengas & Bridal Jewellery"
+        subtitle="Designer lehengas and bridal jewellery available on rent — everything you need for your special day."
+        ctaText="Enquire Now"
+        ctaLink="/contact"
         theme="gold"
       />
+      <Banner
+  title="Rental Maternity Gowns"
+  subtitle="Designer maternity gowns available on rent — comfort with elegance."
+  ctaText="Enquire Now"
+  ctaLink="/contact"
+  theme="pink"
+/>
 
       {newArrivals.length > 0 && (
         <section className="container-custom py-16">
@@ -110,11 +117,11 @@ const Home = () => {
       )}
 
       <Banner
-        title="Custom Stitching, Tailored to You"
+        title="Custom Stitching & Aari Work"
         subtitle="From bridal blouses to Aari embroidery — bring us your design and we'll bring it to life."
         ctaText="Book Consultation"
         ctaLink="/contact"
-        theme="pink"
+        theme="gold"
       />
     </>
   );

@@ -32,7 +32,7 @@ const Navbar = () => {
   return (
     <header className={`sticky top-0 z-50 bg-white/95 backdrop-blur transition-shadow ${scrolled ? 'shadow-md' : ''}`}>
       <div className="bg-gradient-to-r from-pink-700 via-pink-600 to-gold-500 text-white text-center text-xs md:text-sm py-2 px-4 tracking-wide">
-        Free shipping across India on orders above ₹2999 &nbsp;•&nbsp; Custom stitching available
+        Free shipping across India on orders above ₹1000 &nbsp;•&nbsp; Premium Quality Guaranteed
       </div>
 
       <div className="container-custom flex items-center justify-between py-4">
