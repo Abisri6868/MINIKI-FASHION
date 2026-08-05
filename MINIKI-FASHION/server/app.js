@@ -1,57 +1,67 @@
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const cookieParser = require('cookie-parser');
+const rateLimit = require('express-rate-limit');
+
+const { notFound, errorHandler } = require('./middleware/errorMiddleware');
+
+const authRoutes = require('./routes/authRoutes');
+const productRoutes = require('./routes/productRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
+const orderRoutes = require('./routes/orderRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
+const couponRoutes = require('./routes/couponRoutes');
+const wishlistRoutes = require('./routes/wishlistRoutes');
+const cartRoutes = require('./routes/cartRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 const app = express();
 
-// CORS Configuration
-const allowedOrigins = [
-  'https://miniki-fashion-yrij.vercel.app',
-  'http://localhost:3000',
-  'http://localhost:5173'
-];
+// Security & core middleware
+app.use(helmet({ crossOriginResourcePolicy: false }));
+app.use(
+  cors({
+    origin: [process.env.CLIENT_URL, process.env.ADMIN_URL].filter(Boolean),
+    credentials: true,
+  })
+);
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
 
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
-      return callback(null, true);
-    }
-    return callback(null, true);
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
+if (process.env.NODE_ENV !== 'production') {
+  app.use(morgan('dev'));
+}
 
-app.options('*', cors());
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 500,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api', apiLimiter);
 
-// Middlewares
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ success: true, message: 'MINIKI FASHION API is running', timestamp: new Date().toISOString() });
+});
 
 // Routes
-app.use('/api/auth', require('./routes/userRoutes'));
-app.use('/api/orders', require('./routes/orderRoutes'));
-app.use('/api/payments', require('./routes/paymentRoutes'));
-app.use('/api/products', require('./routes/productRoutes'));
-app.use('/api/reviews', require('./routes/reviewRoutes'));
-app.use('/api/wishlist', require('./routes/wishlistRoutes'));
+app.use('/api/auth', authRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/coupons', couponRoutes);
+app.use('/api/wishlist', wishlistRoutes);
+app.use('/api/cart', cartRoutes);
+app.use('/api/payment', paymentRoutes);
+app.use('/api/users', userRoutes);
 
-app.get('/', (req, res) => {
-  res.send('MINIKI FASHION API is running successfully!');
-});
-
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.status(500).json({
-    success: false,
-    message: err.message || 'Internal Server Error'
-  });
-});
+app.use(notFound);
+app.use(errorHandler);
 
 module.exports = app;

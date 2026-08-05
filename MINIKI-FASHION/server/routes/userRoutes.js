@@ -4,7 +4,6 @@ const { getUsers, getUserById, toggleUserStatus } = require('../controllers/user
 const { protect, admin } = require('../middleware/authMiddleware');
 
 router.use(protect, admin);
-
 router.get('/', getUsers);
 router.get('/:id', getUserById);
 router.put('/:id/status', toggleUserStatus);
