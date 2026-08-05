@@ -21,20 +21,21 @@ const userRoutes = require('./routes/userRoutes');
 const app = express();
 
 // Security
-app.use(helmet({
-  crossOriginResourcePolicy: false,
-}));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+  })
+);
 
 // CORS
-app.use(cors({
-  origin: [
-    process.env.CLIENT_URL,
-    process.env.ADMIN_URL,
-  ].filter(Boolean),
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+app.use(
+  cors({
+    origin: [process.env.CLIENT_URL, process.env.ADMIN_URL].filter(Boolean),
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 
 app.options('*', cors());
 
@@ -52,11 +53,14 @@ const apiLimiter = rateLimit({
   max: 500,
   standardHeaders: true,
   legacyHeaders: false,
+
+  // Skip CORS preflight requests
+  skip: (req) => req.method === 'OPTIONS',
 });
 
 app.use('/api', apiLimiter);
 
-// Health
+// Health Check
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     success: true,
@@ -77,7 +81,7 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/users', userRoutes);
 
-// Error handlers
+// Error Handlers
 app.use(notFound);
 app.use(errorHandler);
 
