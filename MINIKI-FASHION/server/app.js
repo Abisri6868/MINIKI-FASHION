@@ -20,14 +20,24 @@ const userRoutes = require('./routes/userRoutes');
 
 const app = express();
 
-// Security & core middleware
-app.use(helmet({ crossOriginResourcePolicy: false }));
-app.use(
-  cors({
-    origin: [process.env.CLIENT_URL, process.env.ADMIN_URL].filter(Boolean),
-    credentials: true,
-  })
-);
+// Security
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+}));
+
+// CORS
+app.use(cors({
+  origin: [
+    process.env.CLIENT_URL,
+    process.env.ADMIN_URL,
+  ].filter(Boolean),
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+app.options('*', cors());
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
@@ -36,17 +46,23 @@ if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }
 
+// Rate Limiter
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 500,
   standardHeaders: true,
   legacyHeaders: false,
 });
+
 app.use('/api', apiLimiter);
 
-// Health check
+// Health
 app.get('/api/health', (req, res) => {
-  res.json({ success: true, message: 'MINIKI FASHION API is running', timestamp: new Date().toISOString() });
+  res.status(200).json({
+    success: true,
+    message: 'MINIKI FASHION API is running',
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // Routes
@@ -61,6 +77,7 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/users', userRoutes);
 
+// Error handlers
 app.use(notFound);
 app.use(errorHandler);
 
