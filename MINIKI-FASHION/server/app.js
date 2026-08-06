@@ -21,7 +21,7 @@ const userRoutes = require('./routes/userRoutes');
 const app = express();
 
 // ==========================
-// 1. Trust Proxy (RAILWAY FIX)
+// 1. Trust Proxy (RAILWAY)
 // ==========================
 app.set('trust proxy', 1);
 
@@ -40,28 +40,27 @@ app.use(
 const allowedOrigins = [
   process.env.CLIENT_URL,
   process.env.ADMIN_URL,
+  "https://miniki-fashion-yrij.vercel.app",
   "http://localhost:5173",
   "http://localhost:5174"
 ].filter(Boolean);
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error('CORS Not Allowed'));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('CORS Not Allowed'));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
 
-// ==========================
-// 3. OPTIONS Preflight Handler (Fixes 429 Preflight issue)
-// ==========================
-app.options('*', cors());
+app.use(cors(corsOptions));
+
+// HARD BYPASS FOR PREFLIGHT (Rate limiter-ku munnadiye handle pannidum)
+app.options('*', cors(corsOptions));
 
 // ==========================
 // Body Parser & Cookies
@@ -70,29 +69,27 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
-// Logger
 if (process.env.NODE_ENV !== "production") {
   app.use(morgan("dev"));
 }
 
 // ==========================
-// 4. Rate Limiter (Bypasses OPTIONS)
+// 3. Rate Limiter (Only for POST, GET, etc.)
 // ==========================
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 mins
-  max: 500, // Limit each IP
+  windowMs: 15 * 60 * 1000,
+  max: 1000, // Limit increased
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.method === "OPTIONS", // Skip preflight
   keyGenerator: (req) => {
     return req.headers['x-forwarded-for'] || req.ip;
   }
 });
 
-// Apply rate limiter ONLY to non-OPTIONS requests under /api
+// Middleware to skip OPTIONS completely from rate limiting
 app.use("/api", (req, res, next) => {
   if (req.method === "OPTIONS") {
-    return next();
+    return res.sendStatus(204);
   }
   return apiLimiter(req, res, next);
 });
