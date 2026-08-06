@@ -6,13 +6,20 @@ const connectDB = require('./config/db');
 
 const PORT = process.env.PORT || 5000;
 
-connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`MINIKI FASHION API server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
-  });
-});
+const startServer = async () => {
+  try {
+    await connectDB();
 
-process.on('unhandledRejection', (err) => {
-  console.error(`Unhandled Rejection: ${err.message}`);
-  process.exit(1);
-});
+    app.listen(PORT, () => {
+      console.log(
+        `MINIKI FASHION API running on port ${PORT}`
+      );
+    });
+
+  } catch (error) {
+    console.error("Server startup failed:", error.message);
+    process.exit(1);
+  }
+};
+
+startServer();
