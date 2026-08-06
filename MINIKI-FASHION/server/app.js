@@ -23,8 +23,7 @@ const app = express();
 // ==========================
 // 1. Trust Proxy (RAILWAY FIX)
 // ==========================
-// Railway reverse proxy valiya varura HTTPS requests & Cookies work aaga ithu kattayam venum
-app.enable('trust proxy'); 
+app.set('trust proxy', 1);
 
 // ==========================
 // Security
@@ -36,32 +35,28 @@ app.use(
 );
 
 // ==========================
-// 2. Updated CORS Configuration
+// 2. CORS Configuration (Only 5173 & 5174)
 // ==========================
 const allowedOrigins = [
   process.env.CLIENT_URL,
   process.env.ADMIN_URL,
-  "http://localhost:5173",
-  "http://localhost:3000"
+  "http://localhost:5173", // Client Storefront
+  "http://localhost:5174"  // Admin Panel
 ].filter(Boolean);
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Postman, Mobile apps, or allowed origins-ku permission tharom
       if (!origin || allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
       return callback(new Error('CORS Not Allowed'));
     },
-    credentials: true, // Cookies cross-origin send aaga ithu venum
+    credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
-
-// NOTE: Manual OPTIONS app.use() & app.options() rendeyum thookiyaachu! 
-// cors() package automatic-a handle pannikkum.
 
 // ==========================
 // Body Parser
@@ -78,17 +73,26 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 // ==========================
-// Rate Limiter
+// 3. Rate Limiter (RAILWAY 429 FIX)
 // ==========================
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 500,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    return req.headers['x-forwarded-for'] || req.ip;
+  },
   skip: (req) => req.method === "OPTIONS"
 });
 
-app.use("/api", apiLimiter);
+// Explicit Bypass for CORS preflight OPTIONS requests
+app.use("/api", (req, res, next) => {
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+  return apiLimiter(req, res, next);
+});
 
 // ==========================
 // Health Check
