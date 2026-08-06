@@ -20,165 +20,105 @@ const userRoutes = require('./routes/userRoutes');
 
 const app = express();
 
+// ==========================
+// 1. Trust Proxy (RAILWAY FIX)
+// ==========================
+// Railway reverse proxy valiya varura HTTPS requests & Cookies work aaga ithu kattayam venum
+app.enable('trust proxy'); 
 
 // ==========================
 // Security
 // ==========================
-
 app.use(
   helmet({
     crossOriginResourcePolicy: false,
   })
 );
 
-
 // ==========================
-// CORS
+// 2. Updated CORS Configuration
 // ==========================
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  process.env.ADMIN_URL,
+  "http://localhost:5173",
+  "http://localhost:3000"
+].filter(Boolean);
 
 app.use(
   cors({
-    origin: [
-      process.env.CLIENT_URL,
-      process.env.ADMIN_URL,
-      "http://localhost:5173",
-      "http://localhost:3000"
-    ].filter(Boolean),
-
-    credentials: true,
-
-    methods: [
-      "GET",
-      "POST",
-      "PUT",
-      "PATCH",
-      "DELETE",
-      "OPTIONS"
-    ],
-
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization"
-    ],
+    origin: function (origin, callback) {
+      // Postman, Mobile apps, or allowed origins-ku permission tharom
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('CORS Not Allowed'));
+    },
+    credentials: true, // Cookies cross-origin send aaga ithu venum
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-
-// ==========================
-// Handle OPTIONS Request
-// ==========================
-
-app.options("*", cors());
-
-app.use((req, res, next) => {
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(204);
-  }
-
-  next();
-});
-
+// NOTE: Manual OPTIONS app.use() & app.options() rendeyum thookiyaachu! 
+// cors() package automatic-a handle pannikkum.
 
 // ==========================
 // Body Parser
 // ==========================
-
-app.use(express.json({
-  limit: "10mb"
-}));
-
-app.use(express.urlencoded({
-  extended: true,
-  limit: "10mb"
-}));
-
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
-
 
 // ==========================
 // Logger
 // ==========================
-
 if (process.env.NODE_ENV !== "production") {
   app.use(morgan("dev"));
 }
 
-
 // ==========================
 // Rate Limiter
 // ==========================
-
 const apiLimiter = rateLimit({
-
   windowMs: 15 * 60 * 1000,
-
   max: 500,
-
   standardHeaders: true,
-
   legacyHeaders: false,
-
-
-  // Allow CORS preflight
   skip: (req) => req.method === "OPTIONS"
-
 });
 
-
 app.use("/api", apiLimiter);
-
 
 // ==========================
 // Health Check
 // ==========================
-
 app.get("/api/health", (req, res) => {
-
   res.status(200).json({
-
     success: true,
-
     message: "MINIKI FASHION API is running",
-
     timestamp: new Date().toISOString()
-
   });
-
 });
-
 
 // ==========================
 // Routes
 // ==========================
-
 app.use("/api/auth", authRoutes);
-
 app.use("/api/products", productRoutes);
-
 app.use("/api/categories", categoryRoutes);
-
 app.use("/api/orders", orderRoutes);
-
 app.use("/api/reviews", reviewRoutes);
-
 app.use("/api/coupons", couponRoutes);
-
 app.use("/api/wishlist", wishlistRoutes);
-
 app.use("/api/cart", cartRoutes);
-
 app.use("/api/payment", paymentRoutes);
-
 app.use("/api/users", userRoutes);
-
 
 // ==========================
 // Error Handler
 // ==========================
-
 app.use(notFound);
-
 app.use(errorHandler);
-
 
 module.exports = app;

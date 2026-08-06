@@ -1,18 +1,27 @@
 const jwt = require('jsonwebtoken');
 
+// Token Generation
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+    expiresIn: '30d',
   });
 };
 
+// Cookie Setup (Cross-Domain Railway Fix)
 const setTokenCookie = (res, token) => {
-  res.cookie('token', token, {
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  const cookieOptions = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
+    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 Days
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+  };
+
+  res.cookie('token', token, cookieOptions);
 };
 
-module.exports = { generateToken, setTokenCookie };
+module.exports = {
+  generateToken,
+  setTokenCookie,
+};

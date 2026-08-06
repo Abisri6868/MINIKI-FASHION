@@ -98,7 +98,15 @@ const loginAdmin = asyncHandler(async (req, res) => {
 // @route   POST /api/auth/logout
 // @access  Private
 const logoutUser = asyncHandler(async (req, res) => {
-  res.cookie('token', '', { httpOnly: true, expires: new Date(0) });
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  res.cookie('token', '', {
+    httpOnly: true,
+    expires: new Date(0),
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+  });
+
   res.json({ success: true, message: 'Logged out successfully' });
 });
 
