@@ -35,13 +35,13 @@ app.use(
 );
 
 // ==========================
-// 2. CORS Configuration (Only 5173 & 5174)
+// 2. CORS Configuration
 // ==========================
 const allowedOrigins = [
   process.env.CLIENT_URL,
   process.env.ADMIN_URL,
-  "http://localhost:5173", // Client Storefront
-  "http://localhost:5174"  // Admin Panel
+  "http://localhost:5173",
+  "http://localhost:5174"
 ].filter(Boolean);
 
 app.use(
@@ -59,37 +59,40 @@ app.use(
 );
 
 // ==========================
-// Body Parser
+// 3. OPTIONS Preflight Handler (Fixes 429 Preflight issue)
+// ==========================
+app.options('*', cors());
+
+// ==========================
+// Body Parser & Cookies
 // ==========================
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
-// ==========================
 // Logger
-// ==========================
 if (process.env.NODE_ENV !== "production") {
   app.use(morgan("dev"));
 }
 
 // ==========================
-// 3. Rate Limiter (RAILWAY 429 FIX)
+// 4. Rate Limiter (Bypasses OPTIONS)
 // ==========================
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 500,
+  windowMs: 15 * 60 * 1000, // 15 mins
+  max: 500, // Limit each IP
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.method === "OPTIONS", // Skip preflight
   keyGenerator: (req) => {
     return req.headers['x-forwarded-for'] || req.ip;
-  },
-  skip: (req) => req.method === "OPTIONS"
+  }
 });
 
-// Explicit Bypass for CORS preflight OPTIONS requests
+// Apply rate limiter ONLY to non-OPTIONS requests under /api
 app.use("/api", (req, res, next) => {
   if (req.method === "OPTIONS") {
-    return res.sendStatus(204);
+    return next();
   }
   return apiLimiter(req, res, next);
 });
