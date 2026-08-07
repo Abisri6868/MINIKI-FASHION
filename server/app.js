@@ -27,9 +27,23 @@ const app = express();
 
 // Security & core middleware
 app.use(helmet({ crossOriginResourcePolicy: false }));
+
+// CORS: uses CLIENT_URL/ADMIN_URL from .env when set (required in production),
+// but always keeps the standard local Vite dev ports allowed as a fallback so
+// local development never breaks silently just because .env is missing/incomplete.
+const defaultDevOrigins = ['http://localhost:5173', 'http://localhost:5174'];
+const configuredOrigins = [process.env.CLIENT_URL, process.env.ADMIN_URL].filter(Boolean);
+const allowedOrigins = process.env.NODE_ENV === 'production'
+  ? configuredOrigins
+  : [...new Set([...configuredOrigins, ...defaultDevOrigins])];
+
+if (allowedOrigins.length === 0) {
+  console.warn('[cors] WARNING: No allowed origins configured (CLIENT_URL/ADMIN_URL missing) — all cross-origin requests will be blocked in production.');
+}
+
 app.use(
   cors({
-    origin: [process.env.CLIENT_URL, process.env.ADMIN_URL].filter(Boolean),
+    origin: allowedOrigins,
     credentials: true,
   })
 );
