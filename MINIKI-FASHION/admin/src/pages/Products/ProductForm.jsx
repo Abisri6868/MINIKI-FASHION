@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { FiUpload, FiX, FiPlus, FiTrash2 } from 'react-icons/fi';
-import { getProduct, createProduct, updateProduct, deleteProductImage } from '../../services/productService';
+import { getProduct, createProduct, updateProduct, deleteProductImage, deleteColorImage } from '../../services/productService';
 import { getCategories } from '../../services/categoryService';
 
 const emptyVariant = { size: '', color: '', stock: 0, sku: '' };
@@ -38,6 +38,8 @@ const ProductForm = () => {
   const [existingImages, setExistingImages] = useState([]);
   const [newImages, setNewImages] = useState([]);
   const [previews, setPreviews] = useState([]);
+  // colorImages: { [colorName]: { existing: [{url,public_id}], newFiles: File[], newPreviews: string[] } }
+  const [colorImages, setColorImages] = useState({});
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
 
@@ -72,6 +74,11 @@ const ProductForm = () => {
       });
       setVariants(p.variants || []);
       setExistingImages(p.images || []);
+      const ci = {};
+      (p.colorImages || []).forEach((group) => {
+        ci[group.color] = { existing: group.images || [], newFiles: [], newPreviews: [] };
+      });
+      setColorImages(ci);
       setLoading(false);
     });
   }, [id, isEdit]);
@@ -110,6 +117,54 @@ const ProductForm = () => {
   };
   const removeVariant = (index) => setVariants((prev) => prev.filter((_, i) => i !== index));
 
+  // Colors typed in the "Colors" field each get their own image gallery below —
+  // selecting that color on the storefront swaps to these images automatically.
+  const colorList = form.colors.split(',').map((c) => c.trim()).filter(Boolean);
+
+  const handleColorImageSelect = (color, e) => {
+    const files = Array.from(e.target.files);
+    setColorImages((prev) => {
+      const entry = prev[color] || { existing: [], newFiles: [], newPreviews: [] };
+      return {
+        ...prev,
+        [color]: {
+          ...entry,
+          newFiles: [...entry.newFiles, ...files],
+          newPreviews: [...entry.newPreviews, ...files.map((f) => URL.createObjectURL(f))],
+        },
+      };
+    });
+  };
+
+  const removeNewColorImage = (color, index) => {
+    setColorImages((prev) => {
+      const entry = prev[color];
+      return {
+        ...prev,
+        [color]: {
+          ...entry,
+          newFiles: entry.newFiles.filter((_, i) => i !== index),
+          newPreviews: entry.newPreviews.filter((_, i) => i !== index),
+        },
+      };
+    });
+  };
+
+  const removeExistingColorImage = async (color, publicId) => {
+    if (!isEdit) return;
+    if (!window.confirm('Remove this color image?')) return;
+    try {
+      await deleteColorImage(id, color, publicId);
+      setColorImages((prev) => ({
+        ...prev,
+        [color]: { ...prev[color], existing: prev[color].existing.filter((img) => img.public_id !== publicId) },
+      }));
+      toast.success('Color image removed');
+    } catch (err) {
+      toast.error('Failed to remove color image');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -130,6 +185,9 @@ const ProductForm = () => {
       formData.set('variants', JSON.stringify(variants.filter((v) => v.size || v.color)));
 
       newImages.forEach((file) => formData.append('images', file));
+      Object.entries(colorImages).forEach(([color, entry]) => {
+        entry.newFiles.forEach((file) => formData.append(`color_${encodeURIComponent(color)}`, file));
+      });
 
       if (isEdit) {
         await updateProduct(id, formData);
@@ -246,6 +304,47 @@ const ProductForm = () => {
             <input type="file" multiple accept="image/*" onChange={handleImageSelect} className="hidden" />
           </label>
         </div>
+
+        {colorList.length > 0 && (
+          <div className="card p-6 space-y-5">
+            <div>
+              <h3 className="font-heading font-bold">Color-based Image Galleries</h3>
+              <p className="text-xs text-gray-400 mt-1">
+                Upload images for each color. On the storefront, selecting a color swaps the gallery to these images automatically.
+              </p>
+            </div>
+            {colorList.map((color) => {
+              const entry = colorImages[color] || { existing: [], newFiles: [], newPreviews: [] };
+              return (
+                <div key={color} className="border border-gray-100 rounded-xl p-4">
+                  <p className="text-sm font-semibold mb-3">{color}</p>
+                  <div className="flex flex-wrap gap-3 mb-3">
+                    {entry.existing.map((img) => (
+                      <div key={img.public_id} className="relative">
+                        <img src={img.url} alt="" className="w-20 h-24 object-cover rounded-lg" />
+                        <button type="button" onClick={() => removeExistingColorImage(color, img.public_id)} className="absolute -top-2 -right-2 bg-white rounded-full shadow p-1 text-red-500">
+                          <FiX size={12} />
+                        </button>
+                      </div>
+                    ))}
+                    {entry.newPreviews.map((src, i) => (
+                      <div key={i} className="relative">
+                        <img src={src} alt="" className="w-20 h-24 object-cover rounded-lg" />
+                        <button type="button" onClick={() => removeNewColorImage(color, i)} className="absolute -top-2 -right-2 bg-white rounded-full shadow p-1 text-red-500">
+                          <FiX size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <label className="flex items-center gap-2 border border-dashed border-pink-200 rounded-lg px-4 py-2.5 justify-center cursor-pointer text-pink-600 hover:bg-pink-50 text-xs w-fit">
+                    <FiUpload size={14} /> Upload {color} Images
+                    <input type="file" multiple accept="image/*" onChange={(e) => handleColorImageSelect(color, e)} className="hidden" />
+                  </label>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         <div className="flex gap-3">
           <button type="submit" disabled={saving} className="btn-primary !py-3 !px-8">

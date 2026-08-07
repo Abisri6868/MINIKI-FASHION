@@ -9,28 +9,34 @@ const Hero = () => {
 
       <div className="container-custom relative py-20 md:py-32 grid md:grid-cols-2 gap-12 items-center">
         <div className="text-center md:text-left">
-          <p className="section-subtitle md:text-left">DESIGNED FOR YOU</p>
+          <p className="section-subtitle md:text-left">Designer Boutique</p>
           <h1 className="text-4xl md:text-6xl font-heading font-bold text-gray-900 leading-tight">
-            Find Your <span className="text-pink-600">Perfect</span>{' '}
-            <span className="text-gold-500">Outfit</span>
+            Elegance Woven for <span className="text-pink-600">Every</span>{' '}
+            <span className="text-gold-500">Moment</span>
           </h1>
           <p className="mt-6 text-gray-600 text-lg max-w-md mx-auto md:mx-0">
-           Discover premium sarees, kurtis, lehengas & western wear
-at MINIKI FASHION, crafted with elegance and timeless style.
+            From bridal luxury to newborn softness — MINIKI FASHION curates timeless
+            designer wear for every chapter of your story.
           </p>
           <div className="mt-8 flex flex-wrap gap-4 justify-center md:justify-start">
-            <Link to="/shop" className="btn-primary">Shop Now</Link>
-            
+            <Link to="/shop" className="btn-primary">Shop Collection</Link>
+            <Link to="/shop?category=Bridal Wear" className="btn-outline">Explore Bridal</Link>
           </div>
         </div>
 
-        <div className="relative flex justify-center">
-  <img
-    src="/images/hero/abiii.png"
-    alt="MINIKI Fashion"
-    className="w-full max-w-lg h-auto object-contain"
-  />
-</div>
+        <div className="relative">
+          <div className="aspect-[4/5] rounded-[2rem] bg-gradient-to-tr from-pink-200 via-pink-100 to-gold-100 shadow-luxury flex items-center justify-center overflow-hidden">
+            <span className="font-heading text-3xl text-pink-700/40 text-center px-10">
+              MINIKI FASHION
+              <br />
+              <span className="text-base tracking-widest uppercase text-gold-600/60">Boutique Collection</span>
+            </span>
+          </div>
+          <div className="absolute -bottom-6 -left-6 bg-white rounded-2xl shadow-luxury p-4 hidden md:block">
+            <p className="text-sm text-gray-500">Handcrafted</p>
+            <p className="font-heading text-xl text-pink-600 font-bold">Aari Work</p>
+          </div>
+        </div>
       </div>
     </section>
   );

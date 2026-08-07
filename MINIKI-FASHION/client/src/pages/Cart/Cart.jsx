@@ -55,16 +55,16 @@ const Cart = () => {
         <div className="bg-white rounded-2xl shadow-md p-6 h-fit sticky top-28">
           <h3 className="font-heading font-bold text-lg mb-4">Order Summary</h3>
           <div className="flex justify-between text-sm mb-2">
-            <span className="text-black-500">Subtotal</span>
+            <span className="text-gray-500">Subtotal</span>
             <span className="font-medium">{formatCurrency(cartTotal)}</span>
           </div>
           <div className="flex justify-between text-sm mb-4">
-            <span className="text-black-500">Shipping</span>
-            <span className="font-medium">{cartTotal >= 2999 ? 'Free' : formatCurrency(50)}</span>
+            <span className="text-gray-500">Shipping</span>
+            <span className="font-medium">{cartTotal >= 2999 ? 'Free' : formatCurrency(99)}</span>
           </div>
           <div className="border-t border-pink-100 pt-4 flex justify-between font-heading font-bold text-lg">
             <span>Total</span>
-            <span className="text-2xl font-bold text-gray-900">{formatCurrency(cartTotal >= 2999 ? cartTotal : cartTotal + 50)}</span>
+            <span className="text-pink-700">{formatCurrency(cartTotal >= 2999 ? cartTotal : cartTotal + 99)}</span>
           </div>
           <button onClick={handleCheckout} className="btn-primary w-full mt-6">Proceed to Checkout</button>
           <Link to="/shop" className="block text-center text-sm text-pink-600 mt-4 hover:underline">

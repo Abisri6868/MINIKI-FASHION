@@ -3,6 +3,36 @@ const Product = require('../models/Product');
 const ApiFeatures = require('../utils/apiFeatures');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinaryUpload');
 
+// req.files (from upload.any()) can contain the default gallery under
+// fieldname "images" AND per-color galleries under fieldname "color_<ColorName>".
+// This uploads everything to Cloudinary and returns { images, colorImagesByName }.
+const processUploadedFiles = async (files = []) => {
+  const images = [];
+  const colorImagesByName = {}; // { Red: [{url,public_id,type}], ... }
+
+  const grouped = {};
+  for (const file of files) {
+    grouped[file.fieldname] = grouped[file.fieldname] || [];
+    grouped[file.fieldname].push(file);
+  }
+
+  for (const [fieldname, fieldFiles] of Object.entries(grouped)) {
+    const uploaded = await Promise.all(
+      fieldFiles.map((file) => uploadToCloudinary(file.buffer, 'miniki-fashion/products'))
+    );
+
+    if (fieldname === 'images') {
+      images.push(...uploaded);
+    } else if (fieldname.startsWith('color_')) {
+      const colorName = decodeURIComponent(fieldname.replace('color_', ''));
+      colorImagesByName[colorName] = colorImagesByName[colorName] || [];
+      colorImagesByName[colorName].push(...uploaded);
+    }
+  }
+
+  return { images, colorImagesByName };
+};
+
 // @desc    Get all products (search, filter, sort, paginate)
 // @route   GET /api/products
 // @access  Public
@@ -96,7 +126,7 @@ const getBestSellers = asyncHandler(async (req, res) => {
 const createProduct = asyncHandler(async (req, res) => {
   const body = { ...req.body };
 
-  ['sizes', 'colors', 'tags', 'variants'].forEach((field) => {
+  ['sizes', 'colors', 'tags', 'variants', 'colorImages'].forEach((field) => {
     if (typeof body[field] === 'string') {
       try {
         body[field] = JSON.parse(body[field]);
@@ -107,12 +137,24 @@ const createProduct = asyncHandler(async (req, res) => {
   });
 
   let images = [];
+  let colorImages = Array.isArray(body.colorImages) ? body.colorImages : [];
+  delete body.colorImages;
+
   if (req.files && req.files.length > 0) {
-    const uploadPromises = req.files.map((file) => uploadToCloudinary(file.buffer, 'miniki-fashion/products'));
-    images = await Promise.all(uploadPromises);
+    const { images: uploadedImages, colorImagesByName } = await processUploadedFiles(req.files);
+    images = uploadedImages;
+
+    Object.entries(colorImagesByName).forEach(([color, imgs]) => {
+      const existing = colorImages.find((c) => c.color === color);
+      if (existing) {
+        existing.images = [...(existing.images || []), ...imgs];
+      } else {
+        colorImages.push({ color, images: imgs });
+      }
+    });
   }
 
-  const product = await Product.create({ ...body, images });
+  const product = await Product.create({ ...body, images, colorImages });
 
   res.status(201).json({ success: true, message: 'Product created successfully', product });
 });
@@ -129,7 +171,7 @@ const updateProduct = asyncHandler(async (req, res) => {
   }
 
   const body = { ...req.body };
-  ['sizes', 'colors', 'tags', 'variants'].forEach((field) => {
+  ['sizes', 'colors', 'tags', 'variants', 'colorImages'].forEach((field) => {
     if (typeof body[field] === 'string') {
       try {
         body[field] = JSON.parse(body[field]);
@@ -139,11 +181,26 @@ const updateProduct = asyncHandler(async (req, res) => {
     }
   });
 
+  // If the client sent an updated colorImages array (e.g. after reordering or
+  // removing images client-side), use it as the new base before merging uploads.
+  let colorImages = Array.isArray(body.colorImages) ? body.colorImages : (product.colorImages || []);
+  delete body.colorImages;
+
   if (req.files && req.files.length > 0) {
-    const uploadPromises = req.files.map((file) => uploadToCloudinary(file.buffer, 'miniki-fashion/products'));
-    const newImages = await Promise.all(uploadPromises);
-    body.images = [...(product.images || []), ...newImages];
+    const { images: uploadedImages, colorImagesByName } = await processUploadedFiles(req.files);
+    if (uploadedImages.length > 0) {
+      body.images = [...(product.images || []), ...uploadedImages];
+    }
+    Object.entries(colorImagesByName).forEach(([color, imgs]) => {
+      const existing = colorImages.find((c) => c.color === color);
+      if (existing) {
+        existing.images = [...(existing.images || []), ...imgs];
+      } else {
+        colorImages.push({ color, images: imgs });
+      }
+    });
   }
+  body.colorImages = colorImages;
 
   Object.assign(product, body);
   await product.save();
@@ -151,7 +208,7 @@ const updateProduct = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Product updated successfully', product });
 });
 
-// @desc    Delete a single image from a product (Admin)
+// @desc    Delete a single image from a product's default gallery (Admin)
 // @route   DELETE /api/products/:id/images/:public_id
 // @access  Private/Admin
 const deleteProductImage = asyncHandler(async (req, res) => {
@@ -169,6 +226,33 @@ const deleteProductImage = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Image removed', product });
 });
 
+// @desc    Delete a single image from a color-specific gallery (Admin)
+// @route   DELETE /api/products/:id/color-images/:color/:public_id
+// @access  Private/Admin
+const deleteColorImage = asyncHandler(async (req, res) => {
+  const product = await Product.findById(req.params.id);
+  if (!product) {
+    res.status(404);
+    throw new Error('Product not found');
+  }
+
+  const color = decodeURIComponent(req.params.color);
+  const publicId = decodeURIComponent(req.params.public_id);
+
+  const colorGroup = product.colorImages.find((c) => c.color === color);
+  if (colorGroup) {
+    colorGroup.images = colorGroup.images.filter((img) => img.public_id !== publicId);
+    // Drop the whole color group if it's now empty
+    if (colorGroup.images.length === 0) {
+      product.colorImages = product.colorImages.filter((c) => c.color !== color);
+    }
+  }
+  await product.save();
+  await deleteFromCloudinary(publicId);
+
+  res.json({ success: true, message: 'Color image removed', product });
+});
+
 // @desc    Delete product (Admin)
 // @route   DELETE /api/products/:id
 // @access  Private/Admin
@@ -182,6 +266,11 @@ const deleteProduct = asyncHandler(async (req, res) => {
 
   for (const img of product.images) {
     await deleteFromCloudinary(img.public_id);
+  }
+  for (const group of product.colorImages || []) {
+    for (const img of group.images) {
+      await deleteFromCloudinary(img.public_id);
+    }
   }
 
   await product.deleteOne();
@@ -220,6 +309,7 @@ module.exports = {
   createProduct,
   updateProduct,
   deleteProductImage,
+  deleteColorImage,
   deleteProduct,
   updateStock,
 };

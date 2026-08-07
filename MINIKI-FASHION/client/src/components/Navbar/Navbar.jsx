@@ -6,6 +6,7 @@ import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { NAV_LINKS, BRAND_NAME } from '../../utils/constants';
 import SearchBar from '../SearchBar/SearchBar';
+import NotificationBell from '../NotificationBell';
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -32,7 +33,7 @@ const Navbar = () => {
   return (
     <header className={`sticky top-0 z-50 bg-white/95 backdrop-blur transition-shadow ${scrolled ? 'shadow-md' : ''}`}>
       <div className="bg-gradient-to-r from-pink-700 via-pink-600 to-gold-500 text-white text-center text-xs md:text-sm py-2 px-4 tracking-wide">
-        Free shipping across India on orders above ₹1000 &nbsp;•&nbsp; Premium Quality Guaranteed
+        Free shipping across India on orders above ₹2999 &nbsp;•&nbsp; Custom stitching available
       </div>
 
       <div className="container-custom flex items-center justify-between py-4">
@@ -88,6 +89,8 @@ const Navbar = () => {
               </span>
             )}
           </Link>
+
+          <NotificationBell />
 
           <div className="relative hidden md:block">
             <button

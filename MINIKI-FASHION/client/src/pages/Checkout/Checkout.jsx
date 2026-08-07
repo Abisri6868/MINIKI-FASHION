@@ -8,6 +8,7 @@ import { formatCurrency } from '../../utils/formatCurrency';
 import { createRazorpayOrder, verifyPayment } from '../../services/paymentService';
 import { createOrder } from '../../services/orderService';
 import { applyCoupon as applyCouponApi } from '../../services/couponService';
+import { getShippingSettings, estimateDelivery } from '../../services/shippingService';
 
 const loadRazorpayScript = () =>
   new Promise((resolve) => {
@@ -36,6 +37,9 @@ const Checkout = () => {
     country: 'India',
   });
   const [paymentMethod, setPaymentMethod] = useState('razorpay');
+  const [deliveryMethod, setDeliveryMethod] = useState('Standard');
+  const [shippingSettings, setShippingSettings] = useState(null);
+  const [estimate, setEstimate] = useState(null);
   const [couponCode, setCouponCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const [applyingCoupon, setApplyingCoupon] = useState(false);
@@ -45,10 +49,27 @@ const Checkout = () => {
     if (cart.length === 0) {
       navigate('/cart');
     }
+    getShippingSettings().then(({ data }) => setShippingSettings(data.settings)).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const shipping = cartTotal >= 2999 ? 0 : 99;
+  // Re-estimate delivery whenever pincode or delivery method changes
+  useEffect(() => {
+    if (!address.pincode || address.pincode.length < 6) {
+      setEstimate(null);
+      return;
+    }
+    const t = setTimeout(() => {
+      estimateDelivery(address.pincode, deliveryMethod)
+        .then(({ data }) => setEstimate(data.estimate))
+        .catch(() => setEstimate(null));
+    }, 400);
+    return () => clearTimeout(t);
+  }, [address.pincode, deliveryMethod]);
+
+  const shipping = estimate
+    ? (cartTotal >= estimate.freeShippingThreshold ? 0 : estimate.shippingCharge)
+    : (shippingSettings ? (cartTotal >= shippingSettings.freeShippingThreshold ? 0 : shippingSettings.shippingCharge) : 99);
   const totalPrice = Math.max(0, cartTotal + shipping - discount);
 
   const handleAddressChange = (e) => {
@@ -88,6 +109,7 @@ const Checkout = () => {
       items: buildOrderItems(),
       shippingAddress: address,
       paymentMethod,
+      deliveryMethod,
       itemsPrice: cartTotal,
       shippingPrice: shipping,
       discountAmount: discount,
@@ -181,16 +203,52 @@ const Checkout = () => {
           </div>
 
           <div className="bg-white rounded-2xl shadow-md p-6">
+            <h3 className="font-heading font-bold text-lg mb-4">Delivery Options</h3>
+            <div className="grid sm:grid-cols-2 gap-3 mb-3">
+              <label className="flex items-center gap-3 border rounded-xl p-4 cursor-pointer has-[:checked]:border-pink-600 has-[:checked]:bg-pink-50">
+                <input type="radio" checked={deliveryMethod === 'Standard'} onChange={() => setDeliveryMethod('Standard')} className="accent-pink-600" />
+                <span className="text-sm font-medium">
+                  Standard Delivery
+                  {shippingSettings && <span className="block text-xs text-gray-400">{shippingSettings.standardDeliveryDays.min}-{shippingSettings.standardDeliveryDays.max} days</span>}
+                </span>
+              </label>
+              <label className="flex items-center gap-3 border rounded-xl p-4 cursor-pointer has-[:checked]:border-pink-600 has-[:checked]:bg-pink-50">
+                <input type="radio" checked={deliveryMethod === 'Express'} onChange={() => setDeliveryMethod('Express')} className="accent-pink-600" />
+                <span className="text-sm font-medium">
+                  Express Delivery
+                  {shippingSettings && <span className="block text-xs text-gray-400">{shippingSettings.expressDeliveryDays.min}-{shippingSettings.expressDeliveryDays.max} days</span>}
+                </span>
+              </label>
+            </div>
+            {estimate && (
+              <p className="text-sm text-gray-600">
+                {estimate.serviceable ? (
+                  <>Estimated Delivery: <span className="font-semibold text-pink-700">{new Date(estimate.estimatedDeliveryDate).toDateString()}</span></>
+                ) : (
+                  <span className="text-red-600">This pincode is currently not serviceable for delivery.</span>
+                )}
+              </p>
+            )}
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-md p-6">
             <h3 className="font-heading font-bold text-lg mb-4">Payment Method</h3>
             <div className="space-y-3">
               <label className="flex items-center gap-3 border rounded-xl p-4 cursor-pointer has-[:checked]:border-pink-600 has-[:checked]:bg-pink-50">
                 <input type="radio" checked={paymentMethod === 'razorpay'} onChange={() => setPaymentMethod('razorpay')} className="accent-pink-600" />
                 <span className="font-medium text-sm">Pay Online (Razorpay) — Cards, UPI, Netbanking, Wallets</span>
               </label>
-              <label className="flex items-center gap-3 border rounded-xl p-4 cursor-pointer has-[:checked]:border-pink-600 has-[:checked]:bg-pink-50">
-                <input type="radio" checked={paymentMethod === 'cod'} onChange={() => setPaymentMethod('cod')} className="accent-pink-600" />
-                <span className="font-medium text-sm">Cash on Delivery</span>
-              </label>
+              {(!shippingSettings || shippingSettings.codAvailable) && (!estimate || estimate.codAvailable) ? (
+                <label className="flex items-center gap-3 border rounded-xl p-4 cursor-pointer has-[:checked]:border-pink-600 has-[:checked]:bg-pink-50">
+                  <input type="radio" checked={paymentMethod === 'cod'} onChange={() => setPaymentMethod('cod')} className="accent-pink-600" />
+                  <span className="font-medium text-sm">
+                    Cash on Delivery
+                    {shippingSettings?.codExtraCharge > 0 && <span className="text-xs text-gray-400"> (+{formatCurrency(shippingSettings.codExtraCharge)})</span>}
+                  </span>
+                </label>
+              ) : (
+                <p className="text-xs text-gray-400 px-4">Cash on Delivery is not available for this address.</p>
+              )}
             </div>
           </div>
         </div>

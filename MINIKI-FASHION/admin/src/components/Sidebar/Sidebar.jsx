@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  FiGrid, FiBox, FiFolder, FiShoppingBag, FiUsers, FiTag, FiX,FiMessageCircle ,
+  FiGrid, FiBox, FiFolder, FiShoppingBag, FiUsers, FiTag, FiX, FiTruck, FiMessageSquare,
 } from 'react-icons/fi';
 
 const links = [
@@ -11,7 +11,8 @@ const links = [
   { to: '/orders', label: 'Orders', icon: FiShoppingBag },
   { to: '/customers', label: 'Customers', icon: FiUsers },
   { to: '/offers', label: 'Offers & Coupons', icon: FiTag },
-  { to: '/messages', label: 'Messages', icon: FiMessageCircle },
+  { to: '/shipping-settings', label: 'Shipping Settings', icon: FiTruck },
+  { to: '/messages', label: 'Messages', icon: FiMessageSquare },
 ];
 
 const Sidebar = ({ open, onClose }) => {

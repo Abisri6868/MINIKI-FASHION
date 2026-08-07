@@ -9,6 +9,7 @@ const {
   createProduct,
   updateProduct,
   deleteProductImage,
+  deleteColorImage,
   deleteProduct,
   updateStock,
 } = require('../controllers/productController');
@@ -21,9 +22,12 @@ router.get('/collections/new-arrivals', getNewArrivals);
 router.get('/collections/best-sellers', getBestSellers);
 router.get('/:idOrSlug', getProductByIdOrSlug);
 
-router.post('/', protect, admin, upload.array('images', 8), createProduct);
-router.put('/:id', protect, admin, upload.array('images', 8), updateProduct);
+// upload.any() accepts both the default "images" field and dynamic
+// "color_<ColorName>" fields for per-color galleries in one multipart request.
+router.post('/', protect, admin, upload.any(), createProduct);
+router.put('/:id', protect, admin, upload.any(), updateProduct);
 router.delete('/:id/images/:public_id', protect, admin, deleteProductImage);
+router.delete('/:id/color-images/:color/:public_id', protect, admin, deleteColorImage);
 router.delete('/:id', protect, admin, deleteProduct);
 router.patch('/:id/stock', protect, admin, updateStock);
 

@@ -9,4 +9,6 @@ export const updateProduct = (id, formData) =>
 export const deleteProduct = (id) => api.delete(`/products/${id}`);
 export const deleteProductImage = (id, publicId) =>
   api.delete(`/products/${id}/images/${encodeURIComponent(publicId)}`);
+export const deleteColorImage = (id, color, publicId) =>
+  api.delete(`/products/${id}/color-images/${encodeURIComponent(color)}/${encodeURIComponent(publicId)}`);
 export const updateStock = (id, payload) => api.patch(`/products/${id}/stock`, payload);

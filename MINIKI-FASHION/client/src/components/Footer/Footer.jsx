@@ -40,11 +40,9 @@ const Footer = () => {
         <div>
           <h4 className="font-heading text-lg mb-4 text-gold-300">Get In Touch</h4>
           <ul className="space-y-3 text-sm text-pink-200">
-            <li className="flex items-start gap-2"><FiMapPin className="mt-1 flex-shrink-0" /> Sumangali Fancy Stores Opp.,
-Municipality Street,
-Usilampatti - 625532 , Tamil Nadu, India</li>
-            <li className="flex items-center gap-2"><FiPhone /> +91 80156 79288 | +91 93420 48363</li>
-            <li className="flex items-center gap-2"><FiMail /> minikifashion@gmail.com</li>
+            <li className="flex items-start gap-2"><FiMapPin className="mt-1 flex-shrink-0" /> Tiruppur, Tamil Nadu, India</li>
+            <li className="flex items-center gap-2"><FiPhone /> +91 90000 00000</li>
+            <li className="flex items-center gap-2"><FiMail /> hello@minikifashion.com</li>
           </ul>
         </div>
       </div>

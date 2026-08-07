@@ -1,7 +1,6 @@
 # MINIKI FASHION — Full Stack E-Commerce Platform
 
-**Tagline:** Designer Boutique | Women's Wear, College Wear, Maternity, New Born & Bridal Jewellery Shop
-
+**Tagline:** Designer Boutique | Maternity & New Born Shop
 
 A production-ready MERN e-commerce platform for MINIKI FASHION, featuring a customer storefront, an admin panel, and a REST API backend.
 
@@ -82,7 +81,7 @@ Secure login, product CRUD with multi-image Cloudinary upload, category manageme
 | Payment | `/api/payment` |
 
 ## Brand
-**MINIKI FASHION** — Bridal Wear, Sarees, tis, Feeding Wear, Maternity Wear, Kids Wear, New Born Collection, Bridal Jewellery, Rental Lehengas, Groom Coat Suits, Aari Work, Customized Stitching.
+**MINIKI FASHION** — Bridal Wear, Sarees, Kurtis, Feeding Wear, Maternity Wear, Kids Wear, New Born Collection, Bridal Jewellery, Rental Lehengas, Groom Coat Suits, Aari Work, Customized Stitching.
 
 Theme: Luxury Boutique — Pink / White / Gold.
 

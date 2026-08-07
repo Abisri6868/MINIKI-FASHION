@@ -6,12 +6,60 @@ import Loader from '../../components/Loader';
 import ProductCard from '../../components/ProductCard';
 import WishlistButton from '../../components/WishlistButton';
 import ReviewCard from '../../components/ReviewCard';
+import ImageGallery from '../../components/ImageGallery';
 import usePageTitle from '../../hooks/usePageTitle';
 import { getProduct } from '../../services/productService';
 import { getProductReviews, createReview } from '../../services/reviewService';
+import { estimateDelivery } from '../../services/shippingService';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
+
+const DeliveryEstimate = () => {
+  const [pincode, setPincode] = useState('');
+  const [estimate, setEstimate] = useState(null);
+  const [checking, setChecking] = useState(false);
+
+  const handleCheck = async (e) => {
+    e.preventDefault();
+    if (pincode.length < 6) return;
+    setChecking(true);
+    try {
+      const { data } = await estimateDelivery(pincode, 'Standard');
+      setEstimate(data.estimate);
+    } catch (err) {
+      setEstimate(null);
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  return (
+    <div className="mt-6 border border-pink-100 rounded-xl p-4">
+      <p className="text-sm font-medium mb-2">Check Delivery Availability</p>
+      <form onSubmit={handleCheck} className="flex gap-2">
+        <input
+          value={pincode}
+          onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+          placeholder="Enter Pincode"
+          className="input-field !py-2 text-sm"
+        />
+        <button type="submit" disabled={checking} className="btn-outline !py-2 !px-4 text-sm whitespace-nowrap">
+          {checking ? 'Checking...' : 'Check'}
+        </button>
+      </form>
+      {estimate && (
+        <p className="text-sm text-gray-600 mt-3">
+          {estimate.serviceable ? (
+            <>Delivery in <span className="font-semibold">{estimate.days} days</span> — Estimated: <span className="font-semibold text-pink-700">{new Date(estimate.estimatedDeliveryDate).toDateString()}</span></>
+          ) : (
+            <span className="text-red-600">Sorry, delivery is not available at this pincode.</span>
+          )}
+        </p>
+      )}
+    </div>
+  );
+};
 
 const ProductDetails = () => {
   const { slug } = useParams();
@@ -23,7 +71,6 @@ const ProductDetails = () => {
   const [related, setRelated] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeImg, setActiveImg] = useState(0);
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -39,7 +86,6 @@ const ProductDetails = () => {
         const { data } = await getProduct(slug);
         setProduct(data.product);
         setRelated(data.relatedProducts || []);
-        setActiveImg(0);
         setSelectedSize(data.product.sizes?.[0] || '');
         setSelectedColor(data.product.colors?.[0] || '');
 
@@ -60,6 +106,12 @@ const ProductDetails = () => {
 
   const hasDiscount = product.discountPrice > 0 && product.discountPrice < product.price;
   const variant = { size: selectedSize, color: selectedColor };
+
+  // Color-based image switching: when a color is selected and the product has
+  // a dedicated gallery for it, show those images; otherwise fall back to the
+  // default gallery so older products (without colorImages) keep working.
+  const colorGallery = product.colorImages?.find((c) => c.color === selectedColor);
+  const galleryImages = (colorGallery?.images?.length > 0 ? colorGallery.images : product.images) || [];
 
   const handleAddToCart = async () => {
     await addItem(product._id, quantity, variant);
@@ -100,28 +152,7 @@ const ProductDetails = () => {
       <div className="grid md:grid-cols-2 gap-10">
         {/* Image gallery */}
         <div>
-          <div className="aspect-[4/5] rounded-2xl overflow-hidden bg-pink-50 mb-4">
-            <img
-              src={product.images?.[activeImg]?.url || 'https://placehold.co/600x750/ffe4ee/d62d68'}
-              alt={product.name}
-              className="w-full h-full object-cover"
-            />
-          </div>
-          {product.images?.length > 1 && (
-            <div className="flex gap-3 overflow-x-auto">
-              {product.images.map((img, i) => (
-                <button
-                  key={img.public_id || i}
-                  onClick={() => setActiveImg(i)}
-                  className={`h-20 w-16 flex-shrink-0 rounded-lg overflow-hidden border-2 ${
-                    activeImg === i ? 'border-pink-600' : 'border-transparent'
-                  }`}
-                >
-                  <img src={img.url} alt="" className="w-full h-full object-cover" />
-                </button>
-              ))}
-            </div>
-          )}
+          <ImageGallery images={galleryImages} productName={product.name} />
         </div>
 
         {/* Details */}
@@ -151,11 +182,6 @@ const ProductDetails = () => {
               </>
             )}
           </div>
-          <div className="mt-4 rounded-lg border border-green-200 bg-green-50 p-3">
-  <p className="text-green-700 font-medium">
-    🚚 Delivery in 7 Days
-  </p>
-</div>
 
           <p className="text-gray-600 mt-5 leading-relaxed">{product.shortDescription || product.description}</p>
 
@@ -207,6 +233,8 @@ const ProductDetails = () => {
               {product.totalStock > 0 ? `${product.totalStock} in stock` : 'Out of stock'}
             </span>
           </div>
+
+          <DeliveryEstimate />
 
           <div className="flex flex-wrap gap-4 mt-6">
             <button onClick={handleAddToCart} disabled={product.totalStock === 0} className="btn-outline flex-1">

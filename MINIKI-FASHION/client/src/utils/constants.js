@@ -1,5 +1,5 @@
 export const BRAND_NAME = 'MINIKI FASHION';
-export const BRAND_TAGLINE = 'Elegant Women’s Boutique';
+export const BRAND_TAGLINE = 'Designer Boutique | Maternity & New Born Shop';
 
 export const NAV_LINKS = [
   { label: 'Home', path: '/' },
@@ -9,13 +9,12 @@ export const NAV_LINKS = [
 ];
 
 export const FOOTER_CATEGORIES = [
+  'Bridal Wear',
   'Sarees',
   'Kurtis',
-  'Jeans & Jeggings',
   'Maternity Wear',
   'Kids Wear',
-  'Inner Wear',
-  'Rental Lehengas & Jewellery',
+  'Rental Lehengas',
 ];
 
 export const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Free Size'];

@@ -1,24 +1,41 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { FiPackage, FiChevronDown, FiChevronUp, FiX } from 'react-icons/fi';
+import { FiPackage, FiChevronDown, FiChevronUp, FiX, FiDownload, FiRefreshCw, FiTruck, FiCreditCard } from 'react-icons/fi';
 import Loader from '../../components/Loader';
 import usePageTitle from '../../hooks/usePageTitle';
-import { getMyOrders, cancelOrder } from '../../services/orderService';
+import { getMyOrders, cancelOrder, reorderItems, downloadInvoice } from '../../services/orderService';
+import { retryPayment, confirmRetryPayment } from '../../services/paymentService';
 import { formatCurrency } from '../../utils/formatCurrency';
+import { useAuth } from '../../context/AuthContext';
 
-const STATUS_STEPS = ['Pending', 'Processing', 'Shipped', 'Out for Delivery', 'Delivered'];
+const STATUS_STEPS = ['Processing', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'];
+
+const loadRazorpayScript = () =>
+  new Promise((resolve) => {
+    if (window.Razorpay) return resolve(true);
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
 
 const statusColor = (status) => {
   if (status === 'Cancelled' || status === 'Returned') return 'bg-red-100 text-red-700';
   if (status === 'Delivered') return 'bg-green-100 text-green-700';
+  if (status === 'Pending Approval' || status === 'Pending') return 'bg-amber-100 text-amber-700';
   return 'bg-gold-100 text-gold-700';
 };
 
 const Orders = () => {
   usePageTitle('My Orders');
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
+  const [busyId, setBusyId] = useState(null);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -47,6 +64,70 @@ const Orders = () => {
     }
   };
 
+  const handleReorder = async (id) => {
+    setBusyId(id);
+    try {
+      const { data } = await reorderItems(id);
+      toast.success(data.message || 'Items added to cart');
+      navigate('/cart');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to reorder');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleDownloadInvoice = async (order) => {
+    setBusyId(order._id);
+    try {
+      await downloadInvoice(order._id, order.orderNumber);
+    } catch (err) {
+      toast.error('Failed to download invoice');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleRetryPayment = async (order) => {
+    setBusyId(order._id);
+    try {
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        toast.error('Failed to load payment gateway');
+        setBusyId(null);
+        return;
+      }
+      const { data } = await retryPayment(order._id);
+      const options = {
+        key: data.key,
+        amount: data.order.amount,
+        currency: data.order.currency,
+        name: 'MINIKI FASHION',
+        description: `Retry payment for #${order.orderNumber}`,
+        order_id: data.order.id,
+        handler: async (response) => {
+          try {
+            await confirmRetryPayment(order._id, response);
+            toast.success('Payment successful!');
+            fetchOrders();
+          } catch (err) {
+            toast.error('Payment verification failed');
+          } finally {
+            setBusyId(null);
+          }
+        },
+        modal: { ondismiss: () => setBusyId(null) },
+        prefill: { name: order.shippingAddress?.fullName, contact: order.shippingAddress?.phone, email: user?.email },
+        theme: { color: '#d62d68' },
+      };
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to retry payment');
+      setBusyId(null);
+    }
+  };
+
   if (loading) return <Loader fullScreen />;
 
   if (orders.length === 0) {
@@ -68,6 +149,7 @@ const Orders = () => {
           const isExpanded = expandedId === order._id;
           const currentStepIndex = STATUS_STEPS.indexOf(order.orderStatus);
           const canCancel = !['Shipped', 'Out for Delivery', 'Delivered', 'Cancelled', 'Returned'].includes(order.orderStatus);
+          const needsPayment = order.paymentMethod === 'razorpay' && !order.isPaid && order.orderStatus !== 'Cancelled';
 
           return (
             <div key={order._id} className="bg-white rounded-2xl shadow-md overflow-hidden">
@@ -76,8 +158,8 @@ const Orders = () => {
                   <p className="font-medium text-sm">Order #{order.orderNumber}</p>
                   <p className="text-xs text-gray-500 mt-1">{new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                 </div>
-                <span className={`text-xs font-semibold px-3 py-1 rounded-full ${statusColor(order.orderStatus)}`}>
-                  {order.orderStatus}
+                <span className={`text-xs font-semibold px-3 py-1 rounded-full ${statusColor(order.adminApproval === 'Pending' ? 'Pending Approval' : order.orderStatus)}`}>
+                  {order.adminApproval === 'Pending' ? 'Pending Approval' : order.orderStatus}
                 </span>
                 <span className="font-heading font-bold text-pink-700">{formatCurrency(order.totalPrice)}</span>
                 <button
@@ -90,9 +172,22 @@ const Orders = () => {
 
               {isExpanded && (
                 <div className="border-t border-pink-100 p-5">
-                  {/* Tracking */}
-                  {!['Cancelled', 'Returned'].includes(order.orderStatus) && (
-                    <div className="flex items-center justify-between mb-8 relative">
+                  {needsPayment && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 flex items-center justify-between flex-wrap gap-3">
+                      <p className="text-sm text-red-700">Payment for this order was not completed.</p>
+                      <button
+                        onClick={() => handleRetryPayment(order)}
+                        disabled={busyId === order._id}
+                        className="btn-primary !py-2 !px-4 text-sm"
+                      >
+                        <FiCreditCard size={14} /> Retry Payment
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Step tracker */}
+                  {!['Cancelled', 'Returned'].includes(order.orderStatus) && order.adminApproval === 'Accepted' && (
+                    <div className="flex items-center justify-between mb-6 relative">
                       {STATUS_STEPS.map((step, i) => (
                         <div key={step} className="flex-1 flex flex-col items-center relative">
                           {i > 0 && (
@@ -115,6 +210,29 @@ const Orders = () => {
                     </div>
                   )}
 
+                  {order.estimatedDeliveryDate && !['Cancelled', 'Delivered'].includes(order.orderStatus) && (
+                    <p className="flex items-center gap-2 text-sm text-gray-600 mb-6 bg-pink-50/60 rounded-lg px-4 py-2.5 w-fit">
+                      <FiTruck className="text-pink-600" /> Estimated Delivery: <span className="font-semibold">{new Date(order.estimatedDeliveryDate).toDateString()}</span>
+                    </p>
+                  )}
+
+                  {/* Detailed tracking history (Flipkart-style timeline with timestamps) */}
+                  {order.trackingHistory?.length > 0 && (
+                    <div className="mb-6">
+                      <p className="font-medium text-sm mb-3">Tracking History</p>
+                      <ol className="relative border-l-2 border-pink-200 ml-2 space-y-4">
+                        {order.trackingHistory.map((t, i) => (
+                          <li key={i} className="ml-4">
+                            <div className="absolute w-2.5 h-2.5 bg-pink-600 rounded-full -left-[5px] mt-1.5" />
+                            <p className="text-sm font-medium">{t.status}</p>
+                            {t.note && <p className="text-xs text-gray-500">{t.note}</p>}
+                            <p className="text-xs text-gray-400">{new Date(t.date).toLocaleString('en-IN')}</p>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+
                   <div className="space-y-3 mb-5">
                     {order.items.map((item, i) => (
                       <div key={i} className="flex gap-3 items-center">
@@ -122,7 +240,7 @@ const Orders = () => {
                         <div className="flex-1">
                           <p className="text-sm font-medium">{item.name}</p>
                           <p className="text-xs text-gray-500">
-                            Qty: {item.quantity} {item.variant?.size && `• Size: ${item.variant.size}`}
+                            Qty: {item.quantity} {item.variant?.size && `• Size: ${item.variant.size}`} {item.variant?.color && `• Color: ${item.variant.color}`}
                           </p>
                         </div>
                         <span className="text-sm font-medium">{formatCurrency(item.price * item.quantity)}</span>
@@ -136,11 +254,27 @@ const Orders = () => {
                     <p>{order.shippingAddress.addressLine1}, {order.shippingAddress.city}, {order.shippingAddress.state} - {order.shippingAddress.pincode}</p>
                   </div>
 
-                  {canCancel && (
-                    <button onClick={() => handleCancel(order._id)} className="flex items-center gap-2 text-sm text-red-600 font-medium hover:underline">
-                      <FiX /> Cancel Order
-                    </button>
+                  {order.refundStatus && order.refundStatus !== 'None' && (
+                    <p className="text-sm text-amber-700 bg-amber-50 rounded-lg px-4 py-2.5 mb-4 w-fit">
+                      Refund Status: <span className="font-semibold">{order.refundStatus}</span> ({formatCurrency(order.refundAmount)})
+                    </p>
                   )}
+
+                  <div className="flex flex-wrap items-center gap-4">
+                    {canCancel && (
+                      <button onClick={() => handleCancel(order._id)} className="flex items-center gap-2 text-sm text-red-600 font-medium hover:underline">
+                        <FiX /> Cancel Order
+                      </button>
+                    )}
+                    {order.orderStatus === 'Delivered' && (
+                      <button onClick={() => handleReorder(order._id)} disabled={busyId === order._id} className="flex items-center gap-2 text-sm text-pink-600 font-medium hover:underline">
+                        <FiRefreshCw /> Reorder
+                      </button>
+                    )}
+                    <button onClick={() => handleDownloadInvoice(order)} disabled={busyId === order._id} className="flex items-center gap-2 text-sm text-gray-600 font-medium hover:underline">
+                      <FiDownload /> Download Invoice
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

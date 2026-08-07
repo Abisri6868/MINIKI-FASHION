@@ -58,15 +58,40 @@ const orderSchema = new mongoose.Schema(
     totalPrice: { type: Number, required: true, default: 0 },
     isPaid: { type: Boolean, default: false },
     paidAt: { type: Date },
+    // 'Pending' kept in the enum (not just 'Pending Approval') so existing orders
+    // created before this upgrade keep validating and displaying correctly.
     orderStatus: {
       type: String,
-      enum: ['Pending', 'Processing', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled', 'Returned'],
+      enum: [
+        'Pending', 'Pending Approval', 'Processing', 'Packed', 'Shipped',
+        'Out for Delivery', 'Delivered', 'Cancelled', 'Returned',
+      ],
+      default: 'Pending Approval',
+    },
+    // Admin approval gate: every new order starts here before the automated
+    // Processing -> Packed -> Shipped -> Out for Delivery -> Delivered pipeline begins.
+    adminApproval: {
+      type: String,
+      enum: ['Pending', 'Accepted', 'Rejected'],
       default: 'Pending',
     },
     trackingHistory: [trackingHistorySchema],
     isDelivered: { type: Boolean, default: false },
     deliveredAt: { type: Date },
     cancelReason: { type: String, default: '' },
+    // Shipping / delivery estimation
+    deliveryMethod: { type: String, enum: ['Standard', 'Express'], default: 'Standard' },
+    estimatedDeliveryDays: { type: Number, default: 7 },
+    estimatedDeliveryDate: { type: Date },
+    acceptedAt: { type: Date },
+    // Refund tracking (mirrors the Refund collection for quick reads on the order)
+    refundStatus: {
+      type: String,
+      enum: ['None', 'Pending', 'Processing', 'Completed', 'Failed'],
+      default: 'None',
+    },
+    refundAmount: { type: Number, default: 0 },
+    invoiceNumber: { type: String, default: '' },
   },
   { timestamps: true }
 );

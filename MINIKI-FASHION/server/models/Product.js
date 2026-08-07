@@ -11,6 +11,26 @@ const variantSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// Color -> image set, so switching color on the product page swaps the gallery automatically
+const colorImageSchema = new mongoose.Schema(
+  {
+    color: { type: String, required: true },
+    colorCode: { type: String, default: '' }, // optional hex swatch
+    images: [
+      {
+        url: { type: String, required: true },
+        public_id: { type: String, required: true },
+        type: {
+          type: String,
+          enum: ['front', 'back', 'side', 'zoom', 'additional'],
+          default: 'additional',
+        },
+      },
+    ],
+  },
+  { _id: false }
+);
+
 const productSchema = new mongoose.Schema(
   {
     name: { type: String, required: [true, 'Product name is required'], trim: true },
@@ -26,8 +46,16 @@ const productSchema = new mongoose.Schema(
       {
         url: { type: String, required: true },
         public_id: { type: String, required: true },
+        type: {
+          type: String,
+          enum: ['front', 'back', 'side', 'zoom', 'additional'],
+          default: 'additional',
+        },
       },
     ],
+    // Per-color galleries. Falls back to the default `images` array when a
+    // selected color has no dedicated images, so old products keep working.
+    colorImages: [colorImageSchema],
     variants: [variantSchema],
     totalStock: { type: Number, default: 0, min: 0 },
     sizes: [{ type: String }],

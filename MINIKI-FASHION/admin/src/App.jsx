@@ -11,6 +11,7 @@ import Categories from './pages/Categories/Categories';
 import Orders from './pages/Orders/Orders';
 import Customers from './pages/Customers/Customers';
 import Offers from './pages/Offers/Offers';
+import ShippingSettings from './pages/ShippingSettings/ShippingSettings';
 import Messages from './pages/Messages/Messages';
 
 function App() {
@@ -32,8 +33,8 @@ function App() {
         <Route path="/orders" element={<Orders />} />
         <Route path="/customers" element={<Customers />} />
         <Route path="/offers" element={<Offers />} />
+        <Route path="/shipping-settings" element={<ShippingSettings />} />
         <Route path="/messages" element={<Messages />} />
-        
       </Route>
     </Routes>
   );

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { FiDollarSign, FiShoppingBag, FiUsers, FiBox, FiClock, FiCheckCircle } from 'react-icons/fi';
+import { FiDollarSign, FiShoppingBag, FiUsers, FiBox, FiClock, FiCheckCircle, FiCalendar, FiTruck, FiCreditCard, FiAlertTriangle } from 'react-icons/fi';
 import { getDashboardStats } from '../../services/orderService';
 import { formatCurrency } from '../../utils/formatCurrency';
 
@@ -11,7 +11,7 @@ const StatCard = ({ icon: Icon, label, value, color }) => (
     </div>
     <div>
       <p className="text-xs text-gray-500">{label}</p>
-      <p className="text-xl font-semibold text-black">{value}</p>
+      <p className="text-xl font-heading font-bold text-gray-800">{value}</p>
     </div>
   </div>
 );
@@ -64,6 +64,32 @@ const Dashboard = () => {
         <StatCard icon={FiClock} label="Cancelled" value={stats.cancelledOrders} color="bg-red-400" />
       </div>
 
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <StatCard icon={FiCalendar} label="Today's Orders" value={stats.todaysOrders} color="bg-indigo-500" />
+        <StatCard icon={FiDollarSign} label="Monthly Revenue" value={formatCurrency(stats.monthlyRevenue)} color="bg-pink-500" />
+        <StatCard icon={FiTruck} label="COD Orders" value={stats.codOrders} color="bg-amber-500" />
+        <StatCard icon={FiCreditCard} label="Online Paid" value={stats.onlinePaidOrders} color="bg-teal-500" />
+      </div>
+
+      {stats.lowStockProducts?.length > 0 && (
+        <div className="card p-6 mb-8 border border-red-100">
+          <h3 className="font-heading font-bold mb-4 flex items-center gap-2 text-red-600">
+            <FiAlertTriangle size={18} /> Low Stock Alert
+          </h3>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {stats.lowStockProducts.map((p) => (
+              <div key={p._id} className="flex items-center gap-3 bg-red-50 rounded-xl p-3">
+                <img src={p.images?.[0]?.url} alt="" className="w-10 h-12 object-cover rounded" />
+                <div>
+                  <p className="text-xs font-medium line-clamp-1">{p.name}</p>
+                  <p className="text-xs text-red-600 font-semibold">{p.totalStock} left</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid lg:grid-cols-2 gap-6 mb-8">
         <div className="card p-6">
           <h3 className="font-heading font-bold mb-4">Revenue Trend</h3>
@@ -89,6 +115,33 @@ const Dashboard = () => {
               <Bar dataKey="totalSold" fill="#d19620" radius={[0, 6, 6, 0]} />
             </BarChart>
           </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6 mb-8">
+        <div className="card p-6">
+          <h3 className="font-heading font-bold mb-4">Customer Growth</h3>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={(stats.customerGrowth || []).map((c) => ({ name: `${MONTH_NAMES[c._id.month - 1]} '${String(c._id.year).slice(-2)}`, count: c.count }))}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#ffe4ee" />
+              <XAxis dataKey="name" fontSize={12} />
+              <YAxis fontSize={12} />
+              <Tooltip />
+              <Bar dataKey="count" fill="#ec4d84" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="card p-6">
+          <h3 className="font-heading font-bold mb-4">Orders by Status</h3>
+          <div className="space-y-3 mt-2">
+            {(stats.ordersByStatus || []).map((s) => (
+              <div key={s._id} className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">{s._id}</span>
+                <span className="font-semibold">{s.count}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

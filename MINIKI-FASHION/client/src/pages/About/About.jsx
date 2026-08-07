@@ -18,8 +18,11 @@ const About = () => {
           <p className="section-subtitle">Our Story</p>
           <h1 className="section-title">About MINIKI FASHION</h1>
           <p className="max-w-2xl mx-auto mt-5 text-gray-600 leading-relaxed">
-           Welcome to MINIKI FASHION! We offer a beautiful range of Women's Wear, College Wear, Maternity, and New Born collections with trendy designs, premium quality fabrics, and affordable prices. Our collections include bridal wear, bridal jewellery, maternity dresses, kids' wear, ethnic wear, kurtis, sarees, and leggings, designed for every special occasion. From elegant bridal looks to comfortable everyday styles, we bring fashion that combines beauty, comfort, and confidence. At MINIKI FASHION, we focus on quality, unique designs, and customer satisfaction to make every moment memorable.
-
+            MINIKI FASHION is a designer boutique built on a passion for timeless Indian
+            craftsmanship and modern comfort. From bridal luxury to newborn softness,
+            every piece we curate is chosen with love, quality, and elegance in mind.
+            We proudly serve mothers-to-be, brides, grooms, and little ones with
+            collections that celebrate every milestone.
           </p>
         </div>
       </section>
