@@ -25,6 +25,12 @@ const shippingLabelRoutes = require('./routes/shippingLabelRoutes');
 
 const app = express();
 
+// Deployed behind a reverse proxy (Railway/Render/Vercel etc). Without this,
+// express-rate-limit (and secure cookies) can misidentify every visitor as the
+// same client via the proxy's IP, causing legitimate users to get rate-limited
+// almost immediately — this is what was causing 429 errors on login.
+app.set('trust proxy', 1);
+
 // Security & core middleware
 app.use(helmet({ crossOriginResourcePolicy: false }));
 
